@@ -1,0 +1,61 @@
+﻿@page "/"
+@using Syncfusion.Blazor.Charts
+@using Microsoft.AspNetCore.SignalR.Client
+@using BlazorSignalRChartApp.Data;
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+ <div style="width:600px;height:450px;">
+     
+    <SfChart Title="Stock Price Analysis of Product X">
+        <ChartArea><ChartAreaBorder Width="0"></ChartAreaBorder></ChartArea>
+        <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime" EdgeLabelPlacement="EdgeLabelPlacement.Shift">
+            <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
+        </ChartPrimaryXAxis>
+        <ChartPrimaryYAxis Title="Price" Minimum="0" Maximum="40" Interval="4" LabelFormat="${value}">
+            <ChartAxisLineStyle Width="0"></ChartAxisLineStyle>
+            <ChartAxisMajorTickLines Width="0"></ChartAxisMajorTickLines>
+        </ChartPrimaryYAxis>
+        <ChartTooltipSettings Enable="true"></ChartTooltipSettings>
+        <ChartSeriesCollection>
+            <ChartSeries DataSource="@Data" XName="Date" Width="2"
+                         YName="Value" Type="ChartSeriesType.Line">
+            </ChartSeries>
+        </ChartSeriesCollection>
+    </SfChart>
+    
+</div>
+
+
+@code {
+    private HubConnection? hubConnection;
+    public List<ChartData> Data;
+    protected override async Task OnInitializedAsync()
+    {
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/charthub"))
+            .Build();       
+       
+        await hubConnection.StartAsync();
+        if (hubConnection.State == HubConnectionState.Connected)
+            Console.Write("connection started");
+        await hubConnection.SendAsync("UpdateData");
+        hubConnection.On<List<ChartData>>("ReceiveMessage", (data) =>
+       {
+           Data = data;           
+           InvokeAsync(StateHasChanged);          
+        });
+
+      
+    }
+
+     public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+}
