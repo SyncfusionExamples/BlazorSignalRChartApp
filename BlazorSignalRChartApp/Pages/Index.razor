@@ -2,12 +2,13 @@
 @using Syncfusion.Blazor.Charts
 @using Microsoft.AspNetCore.SignalR.Client
 @using BlazorSignalRChartApp.Data;
+@using System.Timers
 @inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
- <div style="width:600px;height:450px;">
-     
-    <SfChart Title="Stock Price Analysis of Product X">
+<div style="width:600px;height:450px;">
+
+    <SfChart @ref=@chartObj Title="Stock Price Analysis of Product X">
         <ChartArea><ChartAreaBorder Width="0"></ChartAreaBorder></ChartArea>
         <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime" EdgeLabelPlacement="EdgeLabelPlacement.Shift">
             <ChartAxisMajorGridLines Width="0"></ChartAxisMajorGridLines>
@@ -23,34 +24,45 @@
             </ChartSeries>
         </ChartSeriesCollection>
     </SfChart>
-    
+
 </div>
 
 
 @code {
+    static Timer timer;
+    SfChart chartObj;
     private HubConnection? hubConnection;
     public List<ChartData> Data;
     protected override async Task OnInitializedAsync()
     {
-
         hubConnection = new HubConnectionBuilder()
             .WithUrl(NavigationManager.ToAbsoluteUri("/charthub"))
-            .Build();       
-       
+            .Build();
+
         await hubConnection.StartAsync();
         if (hubConnection.State == HubConnectionState.Connected)
             Console.Write("connection started");
         await hubConnection.SendAsync("UpdateData");
         hubConnection.On<List<ChartData>>("ReceiveMessage", (data) =>
        {
-           Data = data;           
-           InvokeAsync(StateHasChanged);          
-        });
-
-      
+           Data = data;
+           InvokeAsync(StateHasChanged);
+       });
+        // Starting live update in the chart.
+        timer = new Timer(2000);
+        timer.Elapsed += AddData;
+        timer.AutoReset = true;
+        timer.Enabled = true;
+    }
+    void AddData(Object source, ElapsedEventArgs e)
+    {
+        if (chartObj != null && hubConnection?.State == HubConnectionState.Connected)
+        {
+            hubConnection.SendAsync("UpdateData", Data);
+        }
     }
 
-     public async ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (hubConnection is not null)
         {
