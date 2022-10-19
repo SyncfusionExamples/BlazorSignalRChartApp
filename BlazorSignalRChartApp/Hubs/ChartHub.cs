@@ -4,22 +4,33 @@ namespace BlazorSignalRChartApp.Server.Hubs
 {
     public class ChartHub : Hub
     {
-        public async Task UpdateData()
-        {
+        Random random = new Random();
+        DateTime date = new DateTime(2022, 1, 1);
 
-            await Clients.All.SendAsync("ReceiveMessage", GetData());
+        public async Task UpdateData(List<ChartData> data = null)
+        {
+            if (data == null)
+            {
+                await Clients.All.SendAsync("ReceiveMessage", GetInitialData());
+            } else
+            {
+                await Clients.All.SendAsync("ReceiveMessage", GetData(data));
+            }
         }
 
-        public static List<ChartData> GetData()
+        public List<ChartData> GetInitialData()
         {
-            var r = new Random();
-            return new List<ChartData>()
+            List<ChartData> data = new List<ChartData>();
+            for (int i = 0; i < 4; i++)
+            {
+                data.Add(new ChartData { Date = date.AddDays(i), Value = random.Next(10, 40) });
+            }
+            return data;
+        }
+        public List<ChartData> GetData(List<ChartData> data)
         {
-            new ChartData { Date = new DateTime(2022, 2, 2), Value = r.Next(1, 40) },
-            new ChartData { Date = new DateTime(2022, 3, 2), Value = r.Next(1, 40) },
-            new ChartData { Date = new DateTime(2022, 4, 2), Value = r.Next(1, 40) },
-            new ChartData { Date = new DateTime(2022, 5, 2), Value = r.Next(1, 40) }
-        };
+            data.Add(new ChartData { Date = date.AddDays(data.Count), Value = random.Next(10, 40) });
+            return data;
         }
 
     }
