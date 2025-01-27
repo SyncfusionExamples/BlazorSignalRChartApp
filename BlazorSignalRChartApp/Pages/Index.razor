@@ -40,8 +40,6 @@
             .Build();
 
         await hubConnection.StartAsync();
-        if (hubConnection.State == HubConnectionState.Connected)
-            Console.Write("connection started");
         await hubConnection.SendAsync("UpdateData");
         hubConnection.On<List<ChartData>>("ReceiveMessage", (data) =>
        {
